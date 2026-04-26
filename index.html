@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GDES Multistudio 1 — Spring 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0a0a12;
+    --bg-panel: #0e0e1a;
+    --border-glow: #2a2a4a;
+    --text-primary: #e0e0ff;
+    --text-dim: #7878a0;
+    --accent-cyan: #00e5ff;
+    --accent-magenta: #ff00c8;
+    --accent-yellow: #ffe600;
+    --glow-cyan: 0 0 8px #00e5ff88, 0 0 20px #00e5ff44;
+    --glow-magenta: 0 0 8px #ff00c888, 0 0 20px #ff00c844;
+    --glow-yellow: 0 0 8px #ffe60088, 0 0 20px #ffe60044;
+    --scanline: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.15) 2px,
+      rgba(0, 0, 0, 0.15) 4px
+    );
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: var(--scanline);
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.3;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 30%, #00e5ff08 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, #ff00c808 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page-wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 40px 60px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    text-align: center;
+    margin-bottom: 12px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--border-glow);
+    position: relative;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-magenta), transparent);
+    filter: blur(1px);
+  }
+
+  .title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 36px;
+    letter-spacing: 6px;
+    color: var(--accent-cyan);
+    text-shadow: var(--glow-cyan);
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+
+  .subtitle {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 16px;
+    color: var(--accent-magenta);
+    text-shadow: var(--glow-magenta);
+    margin-bottom: 10px;
+    letter-spacing: 4px;
+  }
+
+  .subtitle-secondary {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  /* ── DESCRIPTION ── */
+  .description-box {
+    max-width: 900px;
+    margin: 28px auto 0;
+    padding: 24px 28px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 2px;
+    position: relative;
+    line-height: 1.75;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  .description-box::before {
+    content: '>';
+    position: absolute;
+    top: 24px;
+    left: 10px;
+    color: var(--accent-cyan);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  /* ── PLAYER NAME INPUT ── */
+  .player-name-box {
+    max-width: 900px;
+    margin: 16px auto 36px;
+    padding: 16px 24px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .player-name-box label {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+    color: var(--accent-yellow);
+    text-shadow: var(--glow-yellow);
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+
+  .player-name-box input {
+    flex: 1;
+    min-width: 180px;
+    padding: 10px 14px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-glow);
+    border-radius: 2px;
+    color: var(--accent-cyan);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 11px;
+    letter-spacing: 2px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    text-transform: uppercase;
+  }
+
+  .player-name-box input::placeholder {
+    color: var(--text-dim);
+    opacity: 0.5;
+    text-transform: none;
+  }
+
+  .player-name-box input:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: var(--glow-cyan);
+  }
+
+  .player-name-saved {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent-cyan);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    letter-spacing: 1px;
+  }
+
+  .player-name-saved.show {
+    opacity: 1;
+  }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+  }
+
+  .tab-btn {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 11px;
+    letter-spacing: 3px;
+    padding: 12px 24px 10px;
+    background: transparent;
+    border: 1px solid var(--border-glow);
+    border-bottom: none;
+    border-radius: 2px 2px 0 0;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    top: 1px;
+  }
+
+  .tab-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .tab-btn.active {
+    color: var(--accent-yellow);
+    text-shadow: var(--glow-yellow);
+    background: var(--bg-dark);
+    border-bottom: 1px solid var(--bg-dark);
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  .tab-body {
+    border-top: 1px solid var(--border-glow);
+    padding-top: 16px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main-content {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+  }
+
+  /* ── LEFT: GAME LIST ── */
+  .game-list-panel {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  .game-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .game-list li {
+    counter-increment: game-counter;
+  }
+
+  .game-link {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-size: 15px;
+    letter-spacing: 1px;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    position: relative;
+    background: transparent;
+  }
+
+  .game-link .num {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 9px;
+    color: var(--text-dim);
+    min-width: 32px;
+    transition: color 0.2s ease, text-shadow 0.2s ease;
+  }
+
+  .game-link .label {
+    transition: color 0.2s ease, text-shadow 0.2s ease;
+  }
+
+  .game-link:hover {
+    background: rgba(0, 229, 255, 0.04);
+    border-color: var(--accent-cyan);
+    box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.03);
+  }
+
+  .game-link:hover .num {
+    color: var(--accent-magenta);
+    text-shadow: var(--glow-magenta);
+  }
+
+  .game-link:hover .label {
+    color: var(--accent-cyan);
+    text-shadow: var(--glow-cyan);
+  }
+
+  .game-link::after {
+    content: '▶';
+    font-size: 8px;
+    color: var(--accent-cyan);
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: all 0.2s ease;
+    margin-left: auto;
+  }
+
+  .game-link:hover::after {
+    opacity: 1;
+    transform: translateX(0);
+    text-shadow: var(--glow-cyan);
+  }
+
+  /* ── LEADERBOARD ── */
+  .leaderboard-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .leaderboard-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border: 1px solid transparent;
+    border-radius: 2px;
+  }
+
+  .leaderboard-row .num {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 9px;
+    color: var(--text-dim);
+    min-width: 32px;
+  }
+
+  .leaderboard-row .lb-game {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+  }
+
+  .leaderboard-row .lb-player {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 9px;
+    color: var(--accent-magenta);
+    text-shadow: var(--glow-magenta);
+    min-width: 100px;
+    text-align: right;
+  }
+
+  .leaderboard-row .lb-score {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 11px;
+    color: var(--accent-cyan);
+    text-shadow: var(--glow-cyan);
+    min-width: 80px;
+    text-align: right;
+  }
+
+  .leaderboard-row .lb-none {
+    font-size: 12px;
+    color: var(--text-dim);
+    opacity: 0.4;
+    margin-left: auto;
+  }
+
+  .leaderboard-loading {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 40px 20px;
+    opacity: 0.5;
+  }
+
+  /* ── RIGHT: PREVIEW PANEL ── */
+  .preview-panel {
+    width: 55%;
+    max-width: 720px;
+    flex-shrink: 0;
+    align-self: flex-start;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+    margin-top: 42px;
+  }
+
+  .preview-panel.is-sticky {
+    position: sticky;
+    top: 40px;
+    margin-top: 0;
+  }
+
+  .preview-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--bg-panel);
+    border: 2px solid var(--border-glow);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .preview-frame::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--scanline);
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.2;
+  }
+
+  .preview-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+  }
+
+  .preview-frame img.active {
+    display: block;
+  }
+
+  .preview-placeholder {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 2;
+    padding: 20px;
+    opacity: 0.5;
+  }
+
+  .preview-placeholder span {
+    display: block;
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .preview-label {
+    margin-top: 10px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 9px;
+    color: var(--text-dim);
+    text-align: center;
+    letter-spacing: 2px;
+    min-height: 20px;
+    transition: color 0.3s ease;
+  }
+
+  .preview-label.active {
+    color: var(--accent-cyan);
+    text-shadow: var(--glow-cyan);
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-glow);
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    opacity: 0.5;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 960px) {
+    .main-content {
+      flex-direction: column-reverse;
+    }
+    .preview-panel {
+      width: 100%;
+      max-width: 100%;
+      position: static !important;
+    }
+    .game-list-panel {
+      min-width: 100%;
+    }
+    .title { font-size: 22px; letter-spacing: 3px; }
+    .subtitle { font-size: 12px; }
+    .page-wrapper { padding: 24px 20px 40px; }
+    .leaderboard-row .lb-player { min-width: 60px; font-size: 8px; }
+    .leaderboard-row .lb-score { min-width: 60px; font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- HEADER -->
+  <header class="header">
+    <h1 class="title">Pixelate</h1>
+    <p class="subtitle">GDES Multi Studio 1 - Spring 2026</p>
+    <p class="subtitle-secondary">Course Facilitators: Ayza Sheikh / Syed Erzum Naqvi / Fatima Abbas</p>
+  </header>
+
+  <!-- DESCRIPTION -->
+  <div class="description-box">
+    A collection of video game skins for arcade classics "Pacman" and "Space Invaders" produced by students of Graphic Design at VCUarts Qatar. This project explores worldbuilding and system design, allowing students to explore modular narratives within preset structures. Each student has developed every individual asset for the game themselves, from backgrounds and characters to the various HUD elements, exploring how a collection of unique elements can work together to tell a more comprehensive story. Their work ranges from hyperlocal depictions of Qatari culture to fantastical renditions of space, aliens, and magic.
+    <br><br>
+    Browse the links to experience the various student projects. 
+    <br>
+    Enter your name in the bar below to record your score. 
+    <br><br>
+    Please allow a moment for the assets to load when opening a game.
+  </div>
+
+  <!-- PLAYER NAME INPUT -->
+  <div class="player-name-box">
+    <label for="playerName">PLAYER NAME:</label>
+    <input type="text" id="playerName" maxlength="16" placeholder="Leave blank for ANON" autocomplete="off" spellcheck="false">
+    <span class="player-name-saved" id="nameSaved">SAVED ✓</span>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- LEFT PANEL -->
+    <div class="game-list-panel">
+
+      <!-- TABS -->
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="projects">SELECT PROJECT</button>
+        <button class="tab-btn" data-tab="leaderboard">HIGH SCORES</button>
+      </div>
+
+      <div class="tab-body">
+
+        <!-- TAB: PROJECTS -->
+        <div class="tab-content active" id="tab-projects">
+          <ol class="game-list">
+            <li><a class="game-link" href="Abdalla/index.html" target="_blank" data-preview="Abdalla/preview.png" data-name="Abdalla Al-Bander - Feed Me Frenzy" data-game="game01"><span class="num">01</span><span class="label">Abdalla Al-Bander</span></a></li>
+            <li><a class="game-link" href="Abeeha Khan/index.html" target="_blank" data-preview="Abeeha Khan/preview.png" data-name="[Coming Soon]" data-game="game02"><span class="num">02</span><span class="label">[Coming Soon]</span></a></li>
+            <li><a class="game-link" href="Aisha Al-Naimi/index.html" target="_blank" data-preview="Aisha Al-Naimi/preview.png" data-name="Aisha Al-Naimi - Farm Life" data-game="game03"><span class="num">03</span><span class="label">Aisha Al-Naimi</span></a></li>
+            <li><a class="game-link" href="Altaf AlSabah/index.html" target="_blank" data-preview="Altaf AlSabah/preview.png" data-name="Altaf AlSabah - Midnight Escape" data-game="game04"><span class="num">04</span><span class="label">Altaf AlSabah</span></a></li>
+            <li><a class="game-link" href="Alya Al-Jamal/index.html" target="_blank" data-preview="Alya Al-Jamal/preview.png" data-name="Alya Al-Jamal - Last Call Market" data-game="game05"><span class="num">05</span><span class="label">Alya Al-Jamal</span></a></li>
+            <li><a class="game-link" href="Dana Ahmed/index.html" target="_blank" data-preview="Dana Ahmed/preview.png" data-name="Dana Ahmed - Esteem Garden" data-game="game06"><span class="num">06</span><span class="label">Dana Ahmed</span></a></li>
+            <li><a class="game-link" href="Farah Osman/index.html" target="_blank" data-preview="Farah Osman/preview.png" data-name="[Coming Soon]" data-game="game07"><span class="num">07</span><span class="label">[Coming Soon]</span></a></li>
+            <li><a class="game-link" href="Fatima Abdulla/index.html" target="_blank" data-preview="Fatima Abdulla/preview.png" data-name="Fatima Abdulla - Doha Orbit" data-game="game08"><span class="num">08</span><span class="label">Fatima Abdulla</span></a></li>
+            <li><a class="game-link" href="Fatima Al-Attiya/index.html" target="_blank" data-preview="Fatima Al-Attiya/preview.png" data-name="Fatima Al-Attiya - Coffee Run" data-game="game09"><span class="num">09</span><span class="label">Fatima Al-Attiya</span></a></li>
+            <li><a class="game-link" href="Hind AlJaidah/index.html" target="_blank" data-preview="Hind AlJaidah/preview.png" data-name="Hind AlJaidah - Cupcake Run" data-game="game10"><span class="num">10</span><span class="label">Hind AlJaidah</span></a></li>
+            <li><a class="game-link" href="Jumana Al-Emadi/index.html" target="_blank" data-preview="Jumana Al-Emadi/preview.png" data-name="Jumana Al-Emadi - Alien Desert Safari" data-game="game11"><span class="num">11</span><span class="label">Jumana Al-Emadi</span></a></li>
+            <li><a class="game-link" href="Kristen DSilva/index.html" target="_blank" data-preview="Kristen DSilva/preview.png" data-name="Kristen DSilva - Megatropolis" data-game="game12"><span class="num">12</span><span class="label">Kristen DSilva</span></a></li>
+            <li><a class="game-link" href="Mooza Al-Mohannadi/index.html" target="_blank" data-preview="Mooza Al-Mohannadi/preview.png" data-name="Mooza Al-Mohannadi - Glam Run" data-game="game13"><span class="num">13</span><span class="label">Mooza Al-Mohannadi</span></a></li>
+            <li><a class="game-link" href="Noora Al-Attiya/index.html" target="_blank" data-preview="Noora Al-Attiya/preview.png" data-name="Noora Al-Attiya - The Maze of Paris" data-game="game14"><span class="num">14</span><span class="label">Noora Al-Attiya</span></a></li>
+            <li><a class="game-link" href="Noora Al-Kuwari/index.html" target="_blank" data-preview="Noora Al-Kuwari/preview.png" data-name="Noora Al-Kuwari - Deep Sea Invaders" data-game="game15"><span class="num">15</span><span class="label">Noora Al-Kuwari</span></a></li>
+            <li><a class="game-link" href="Noora Al-Thani/index.html" target="_blank" data-preview="Noora Al-Thani/preview.png" data-name="Noora Al-Thani - Going Nuts!" data-game="game16"><span class="num">16</span><span class="label">Noora Al-Thani</span></a></li>
+            <li><a class="game-link" href="Nouf Al-Kuwari/index.html" target="_blank" data-preview="Nouf Al-Kuwari/preview.png" data-name="Nouf Al-Kuwari - Dead Gold Dust" data-game="game17"><span class="num">17</span><span class="label">Nouf Al-Kuwari</span></a></li>
+            <li><a class="game-link" href="Sara Almuhannadi/index.html" target="_blank" data-preview="Sara Almuhannadi/preview.png" data-name="Sara Almuhannadi - Roll Your Luck" data-game="game18"><span class="num">18</span><span class="label">Sara Almuhannadi</span></a></li>
+            <li><a class="game-link" href="Waad Al-Nasr/index.html" target="_blank" data-preview="Waad Al-Nasr/preview.png" data-name="Waad Al-Nasr - Dorik Tqadim" data-game="game19"><span class="num">19</span><span class="label">Waad Al-Nasr</span></a></li>
+            <li><a class="game-link" href="Nourhan Soltan Almayasa Al-Meadadi/index.html" target="_blank" data-preview="Nourhan Soltan Almayasa Al-Meadadi/preview.png" data-name="Nourhan Soltan and Almayasa Al-Meadadi - Panic Picnic" data-game="game20"><span class="num">20</span><span class="label">Nourhan Soltan and Almayasa Al-Meadadi</span></a></li>
+          </ol>
+        </div>
+
+        <!-- TAB: LEADERBOARD -->
+        <div class="tab-content" id="tab-leaderboard">
+          <div class="leaderboard-loading" id="leaderboardLoading">LOADING SCORES...</div>
+          <ul class="leaderboard-list" id="leaderboardList" style="display:none;"></ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PREVIEW PANEL -->
+    <div class="preview-panel">
+      <div class="preview-frame" id="previewFrame">
+        <div class="preview-placeholder" id="previewPlaceholder">
+          <span>⬡</span>
+          HOVER ON A PROJECT<br>TO PREVIEW
+        </div>
+        <img id="previewImage" src="" alt="Game preview">
+      </div>
+      <div class="preview-label" id="previewLabel"></div>
+    </div>
+
+  </div>
+
+  <div class="footer">VCUarts Qatar — Graphic Design — 2026</div>
+
+</div>
+
+<script>
+  /* ================================================================
+     CONFIGURATION — Replace this URL with your Google Apps Script URL
+     ================================================================ */
+  const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycby0VTF3XgdDLFa-AqJchPDtnLzK3s5IGOjjHL-DMjglCLg-9CvkUeg5mo2D19tHRBzO/exec';
+
+  /* ── Game metadata (used by leaderboard) ── */
+  const GAMES = [
+    { id: 'game01', name: 'Abdalla Al-Bander — Feed Me Frenzy' },
+    { id: 'game02', name: 'Abeeha Khan — F1 Escape' },
+    { id: 'game03', name: 'Aisha Al-Naimi — Farm Life' },
+    { id: 'game04', name: 'Altaf AlSabah — Midnight Escape' },
+    { id: 'game05', name: 'Alya Al-Jamal — Last Call Market' },
+    { id: 'game06', name: 'Dana Ahmed — Esteem Garden' },
+    { id: 'game07', name: 'Farah Osman' },
+    { id: 'game08', name: 'Fatima Abdulla — Doha Orbit' },
+    { id: 'game09', name: 'Fatima Al-Attiya — Coffee Run' },
+    { id: 'game10', name: 'Hind AlJaidah — Cupcake Run' },
+    { id: 'game11', name: 'Jumana Al-Emadi — Alien Desert Safari' },
+    { id: 'game12', name: 'Kristen DSilva — Megatropolis' },
+    { id: 'game13', name: 'Mooza Al-Mohannadi — Glam Run' },
+    { id: 'game14', name: 'Noora Al-Attiya — The Maze of Paris' },
+    { id: 'game15', name: 'Noora Al-Kuwari — Deep Sea Invaders' },
+    { id: 'game16', name: 'Noora Al-Thani — Going Nuts!' },
+    { id: 'game17', name: 'Nouf Al-Kuwari — Dead Gold Dust' },
+    { id: 'game18', name: 'Sara Almuhannadi — Roll Your Luck' },
+    { id: 'game19', name: 'Waad Al-Nasr — Dorik Tqadim' },
+    { id: 'game20', name: 'Nourhan Soltan & Almayasa Al-Meadadi — Panic Picnic' },
+  ];
+
+  /* ── Elements ── */
+  const links = document.querySelectorAll('.game-link');
+  const previewImage = document.getElementById('previewImage');
+  const previewPlaceholder = document.getElementById('previewPlaceholder');
+  const previewLabel = document.getElementById('previewLabel');
+  const previewPanel = document.querySelector('.preview-panel');
+  const descriptionBox = document.querySelector('.description-box');
+  const playerNameInput = document.getElementById('playerName');
+  const nameSavedEl = document.getElementById('nameSaved');
+  const leaderboardList = document.getElementById('leaderboardList');
+  const leaderboardLoading = document.getElementById('leaderboardLoading');
+
+  /* ── Sticky observer ── */
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting) {
+        previewPanel.classList.remove('is-sticky');
+      } else {
+        previewPanel.classList.add('is-sticky');
+      }
+    },
+    { threshold: 0 }
+  );
+  observer.observe(descriptionBox);
+
+  /* ── Preload preview images ── */
+  const preloadCache = {};
+  links.forEach(link => {
+    const src = link.dataset.preview;
+    if (src) {
+      const img = new Image();
+      img.src = src;
+      preloadCache[src] = img;
+    }
+  });
+
+  /* ── Preview hover ── */
+  links.forEach(link => {
+    link.addEventListener('mouseenter', () => {
+      const src = link.dataset.preview;
+      const name = link.dataset.name;
+      if (src) {
+        previewImage.src = src;
+        previewImage.classList.add('active');
+        previewPlaceholder.style.display = 'none';
+      }
+      previewLabel.textContent = name || '';
+      previewLabel.classList.add('active');
+    });
+  });
+
+  /* ── Tabs ── */
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'leaderboard') loadLeaderboard();
+    });
+  });
+
+  /* ── Player name persistence ── */
+  const savedName = localStorage.getItem('pixelate_player_name');
+  if (savedName) playerNameInput.value = savedName;
+
+  let saveTimeout;
+  playerNameInput.addEventListener('input', () => {
+    localStorage.setItem('pixelate_player_name', playerNameInput.value.trim());
+    nameSavedEl.classList.add('show');
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => nameSavedEl.classList.remove('show'), 1500);
+  });
+
+  /* ── Store player name before opening game ── */
+  links.forEach(link => {
+    link.addEventListener('click', () => {
+      const name = playerNameInput.value.trim() || 'ANON';
+      localStorage.setItem('pixelate_player_name', playerNameInput.value.trim());
+      localStorage.setItem('pixelate_active_player', name);
+    });
+  });
+
+  /* ── Check for pending scores when page gains focus ── */
+  window.addEventListener('focus', processPendingScores);
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') processPendingScores();
+  });
+
+  function processPendingScores() {
+    const pending = localStorage.getItem('pixelate_pending_score');
+    if (!pending) return;
+    try {
+      const { game, score } = JSON.parse(pending);
+      const playerName = localStorage.getItem('pixelate_active_player') || 'ANON';
+      localStorage.removeItem('pixelate_pending_score');
+      submitScore(game, playerName, score);
+    } catch (e) {
+      localStorage.removeItem('pixelate_pending_score');
+    }
+  }
+
+  /* ── Submit score to Google Sheet ── */
+  function submitScore(game, name, score) {
+    if (SHEET_API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+      console.log('Score received (API not yet configured):', { game, name, score });
+      return;
+    }
+    fetch(SHEET_API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ game, name, score: Number(score) })
+    }).catch(err => console.warn('Score submit error:', err));
+  }
+
+  /* ── Load leaderboard from Google Sheet ── */
+  let leaderboardCache = null;
+
+  function loadLeaderboard() {
+    if (SHEET_API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+      renderLeaderboard({});
+      return;
+    }
+    if (leaderboardCache) {
+      renderLeaderboard(leaderboardCache);
+      return;
+    }
+    leaderboardLoading.style.display = '';
+    leaderboardList.style.display = 'none';
+
+    fetch(SHEET_API_URL)
+      .then(r => r.json())
+      .then(data => {
+        leaderboardCache = data;
+        renderLeaderboard(data);
+      })
+      .catch(() => renderLeaderboard({}));
+  }
+
+  function renderLeaderboard(data) {
+    leaderboardLoading.style.display = 'none';
+    leaderboardList.style.display = '';
+    leaderboardList.innerHTML = '';
+
+    GAMES.forEach((game, i) => {
+      const entry = data[game.id];
+      const li = document.createElement('li');
+      li.className = 'leaderboard-row';
+      const num = String(i + 1).padStart(2, '0');
+
+      if (entry && entry.score > 0) {
+        li.innerHTML = `
+          <span class="num">${num}</span>
+          <span class="lb-game">${game.name}</span>
+          <span class="lb-player">${entry.name}</span>
+          <span class="lb-score">${Number(entry.score).toLocaleString()}</span>
+        `;
+      } else {
+        li.innerHTML = `
+          <span class="num">${num}</span>
+          <span class="lb-game">${game.name}</span>
+          <span class="lb-none">— no score yet —</span>
+        `;
+      }
+      leaderboardList.appendChild(li);
+    });
+  }
+
+  /* ── Process any score that arrived while we were away ── */
+  processPendingScores();
+</script>
+
+</body>
+</html>

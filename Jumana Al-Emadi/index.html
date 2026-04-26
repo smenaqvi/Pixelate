@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Invaders</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    width:100%; height:100%;
+    background:#000;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  canvas {
+    display:block;
+    max-width:100vw;
+    max-height:100vh;
+    aspect-ratio:16/9;
+    image-rendering:pixelated;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║                      ASSET CONFIGURATION                            ║
+// ║  Set any entry to a file path to replace the built-in fallback.     ║
+// ║  Leave as null to use the pixel-art / text placeholder.             ║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  TYPOGRAPHY                                                          ║
+// ║    fontFile   – path to a .ttf / .woff2 font file                   ║
+// ║    fontName   – font-family name used once loaded                    ║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  WORLD  (all 1920 × 1080)                                            ║
+// ║    background   – full canvas 1920 × 1080; cropped to play area      ║
+// ║                   (top 90px and bottom 70px are hidden by HUD/legend) ║
+// ║    border       – drawn on top of everything; transparent centre     ║
+// ║    dangerLine   – strip from the danger line to the legend (1920 × 110)║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  SPRITES – drawn scaled to the sizes shown below                     ║
+// ║  Animated sprites have two frames (A and B) that cycle automatically.║
+// ║  The _B variant is optional — if null the sprite stays on frame A.   ║
+// ║    player           / playerB          88 × 54                       ║
+// ║    enemyStandard    / enemyStandardB   64 × 48                       ║
+// ║    enemyFast        / enemyFastB       54 × 44                       ║
+// ║    enemyTank        / enemyTankB       88 × 56  (full health)        ║
+// ║    enemyTankHit     / enemyTankHitB    88 × 56  (after first hit)    ║
+// ║    bullet                              24 × 24  (square)             ║
+// ║    enemyBullet                         20 × 20  (square)             ║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  HUD  (drawn inside the top bar, 1920 × 90)                          ║
+// ║    hudBackground  – full-width HUD bar image (1920 × 90)             ║
+// ║    hudDivider     – line between HUD and playfield (1920 × 4)        ║
+// ║    scorePanel     – panel behind score label + number (340 × 70)     ║
+// ║    wavePanel      – panel behind wave label + number  (340 × 70)     ║
+// ║    lifeIcon       – per-life icon (54 × 34); auto-syncs with player  ║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  LEGEND BAR  (bottom bar, 1920 × 70)                                 ║
+// ║    legendBackground – replaces the entire legend bar (1920 × 70)     ║
+// ║      If set, the bar image is drawn and NO text/sprites are added.   ║
+// ║      Include the enemy icons and labels inside your PNG.             ║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  FULL-SCREEN OVERLAY SCREENS  (1920 × 1080)                          ║
+// ║  When set, the PNG is drawn over the full canvas; text and the       ║
+// ║  built-in button are NOT drawn — place everything in your image      ║
+// ║  EXCEPT the interactive button (that is still drawn on top).         ║
+// ║    screenStart    – start / title screen background                  ║
+// ║    screenGameOver – game-over screen background                      ║
+// ║    screenWaveClear– wave-clear screen background                     ║
+// ║    screenLoading  – shown while assets load (1920 × 1080)            ║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  BUTTONS  (normal + hover; any size — drawn centred)                 ║
+// ║  Hover image falls back to normal at full opacity if null.           ║
+// ║    btnStart / btnStartHover           480 × 90                       ║
+// ║    btnRestart / btnRestartHover       480 × 90                       ║
+// ║    btnNextWave / btnNextWaveHover     480 × 90                       ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+
+const ASSETS = {
+  // ── Typography ──────────────────────────────────────────────────────
+  fontFile:           null,   // e.g. 'assets/font.ttf'
+  fontName:           'Press Start 2P',
+
+  // ── World ────────────────────────────────────────────────────────────
+  background:         'assets/screens/background.png',   // e.g. 'assets/background.png'
+  border:             null,   // e.g. 'assets/border.png'
+  dangerLine:         'assets/hud/danger.png',   // e.g. 'assets/danger_line.png'
+
+  // ── Sprites ──────────────────────────────────────────────────────────
+  // Each animated sprite has frame A and optional frame B (cycles when both set).
+  // "Hit" variants are shown after the enemy takes its first hit.
+  // Tank has three health states: full → hit1 → hit2.
+
+  player:               'assets/player/player1.png',   // e.g. 'assets/player_a.png'
+  playerB:               'assets/player/player2.png',   // e.g. 'assets/player_b.png'
+
+  enemyStandard:        'assets/enemies/enemyBasic1.png',   // full health, frame A
+  enemyStandardB:       'assets/enemies/enemyBasic2.png',   // full health, frame B
+  enemyStandardHit:     'assets/enemies/enemyBasicFull1.png',   // after 1st hit, frame A
+  enemyStandardHitB:    'assets/enemies/enemyBasicFull2.png',   // after 1st hit, frame B
+
+  enemyFast:            'assets/enemies/enemyFast1.png',   // full health, frame A
+  enemyFastB:           'assets/enemies/enemyFast2.png',   // full health, frame B
+  enemyFastHit:         'assets/enemies/enemyFastFull1.png',   // after 1st hit, frame A
+  enemyFastHitB:        'assets/enemies/enemyFastFull2.png',   // after 1st hit, frame B
+
+  enemyTank:            'assets/enemies/enemyTank1.png',   // full health (3 HP), frame A
+  enemyTankB:           'assets/enemies/enemyTank2.png',   // full health, frame B
+  enemyTankHit:         'assets/enemies/enemyTankEat1.png',   // after 1st hit (2 HP), frame A
+  enemyTankHitB:        'assets/enemies/enemyTankEat2.png',   // after 1st hit, frame B
+  enemyTankHit2:        'assets/enemies/enemyTankFull1.png',   // after 2nd hit (1 HP), frame A
+  enemyTankHit2B:       'assets/enemies/enemyTankFull2.png',   // after 2nd hit, frame B
+
+  // Player bullets — one of these 5 is chosen at random each shot.
+  // Any left as null are excluded from the random pool.
+  bullet1:              'assets/bullets/playerBullet1.png',   // e.g. 'assets/bullet_1.png'
+  bullet2:              'assets/bullets/playerBullet2.png',
+  bullet3:              'assets/bullets/playerBullet3.png',
+  bullet4:              'assets/bullets/playerBullet4.png',
+  bullet5:              'assets/bullets/playerBullet5.png',
+
+  enemyBullet:          'assets/bullets/enemyBullet.png',
+
+  // ── HUD ──────────────────────────────────────────────────────────────
+  hudBackground:      'assets/hud/hudBG.png',   // e.g. 'assets/hud_background.png'
+  hudDivider:         'assets/hud/hudLine.png',   // e.g. 'assets/hud_divider.png'
+  scorePanel:         'assets/hud/scorePanel.png',   // e.g. 'assets/score_panel.png'
+  wavePanel:          'assets/hud/wavePanel.png',   // e.g. 'assets/wave_panel.png'
+  lifeIcon:           'assets/hud/lifeIcon.png',   // e.g. 'assets/life_icon.png'  (auto-uses player if null)
+
+  // ── Legend bar ───────────────────────────────────────────────────────
+  legendBackground:   'assets/hud/legend.png',   // e.g. 'assets/legend.png'  (replaces entire bar)
+
+  // ── Overlay screens ──────────────────────────────────────────────────
+  screenStart:        'assets/screens/screenStart.png',   // e.g. 'assets/screen_start.png'
+  screenGameOver:     'assets/screens/screenEnd.png',   // e.g. 'assets/screen_gameover.png'
+  screenWaveClear:    'assets/screens/screenWave.png',   // e.g. 'assets/screen_waveclear.png'
+  screenLoading:      null,   // e.g. 'assets/screen_loading.png'
+
+  // ── Buttons — normal state ───────────────────────────────────────────
+  btnStart:           'assets/buttons/btnStart1.png',
+  btnRestart:         'assets/buttons/btnEnd1.png',
+  btnNextWave:        'assets/buttons/btnNext1.png',
+
+  // ── Buttons — hovered state ──────────────────────────────────────────
+  btnStartHover:      'assets/buttons/btnStart2.png',
+  btnRestartHover:    'assets/buttons/btnEnd2.png',
+  btnNextWaveHover:   'assets/buttons/btnNext2.png',
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ENGINE
+// ═══════════════════════════════════════════════════════════════════════
+
+// ─── Canvas ─────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = 1920, H = 1080;
+canvas.width = W; canvas.height = H;
+
+// ─── Palette (fallback colours) ─────────────────────────────────────
+const C = {
+  green:'#00ff41', gdim:'#00882a', cyan:'#00e5ff',
+  yellow:'#ffe100', red:'#ff2a2a', orange:'#ff7700',
+  white:'#ffffff', grey:'#444444', black:'#000000',
+  darkbg:'#050d05',
+};
+
+// ─── Image / GIF loader ──────────────────────────────────────────────
+// Chrome will not advance GIF frames when ctx.drawImage() reads from a
+// plain <img> element, regardless of whether it is in the DOM.
+//
+// The only reliable fix in Chrome is to give each GIF its own small
+// visible <canvas> element, draw the <img> onto that relay canvas every
+// animation frame, then draw the relay canvas onto the game canvas.
+// Chrome animates GIFs that are being actively painted to a canvas.
+//
+// For PNGs the relay canvas is still used (harmless) so the draw path
+// is identical for both file types — no special casing needed.
+//
+// imgs[key]        → the raw <img> element (source)
+// relays[key]      → offscreen <canvas> that acts as the animated relay
+// drawAsset(key, ctx, x, y, w, h) → use this instead of ctx.drawImage()
+
+const imgs   = {};   // raw <img> elements
+const relays = {};   // per-asset relay canvases
+
+// Relay container — visible to Chrome's compositor but off-screen and
+// visually invisible (opacity:0, pointer-events:none, 1px × 1px clip)
+const _relayRoot = document.createElement('div');
+_relayRoot.style.cssText = [
+  'position:fixed',
+  'left:-9999px',
+  'top:0',
+  'width:1px',
+  'height:1px',
+  'overflow:visible',   // children must not be clipped to zero
+  'opacity:0.01',       // > 0 so Chrome considers it composited
+  'pointer-events:none',
+  'z-index:-1',
+].join(';');
+document.body.appendChild(_relayRoot);
+
+function _makeRelay(key, img) {
+  const rc  = document.createElement('canvas');
+  const nw  = img.naturalWidth  || 64;
+  const nh  = img.naturalHeight || 64;
+  rc.width  = nw;
+  rc.height = nh;
+  // Give the canvas a rendered size > 0 so Chrome's compositor sees it
+  rc.style.cssText = `width:${nw}px;height:${nh}px;display:block;`;
+  _relayRoot.appendChild(rc);
+  relays[key] = rc;
+}
+
+function loadImg(key, src) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      imgs[key] = img;
+      _makeRelay(key, img);
+      res();
+    };
+    img.onerror = () => res();
+    img.src = src;
+  });
+}
+
+// Call this every game-loop frame for every asset that might be a GIF.
+// It stamps the current <img> frame onto the relay canvas so the next
+// ctx.drawImage(relay, …) call gets an up-to-date frame.
+function tickRelays() {
+  for (const key in relays) {
+    const rc  = relays[key];
+    const img = imgs[key];
+    if (!img) continue;
+    const rctx = rc.getContext('2d');
+    rctx.clearRect(0, 0, rc.width, rc.height);
+    rctx.drawImage(img, 0, 0);
+  }
+}
+
+// Drop-in replacement for ctx.drawImage(imgs[key], x, y, w, h).
+// Uses the relay canvas so GIF frames are always current.
+function drawAsset(key, cx, x, y, w, h) {
+  const src = relays[key] || imgs[key];
+  if (src) cx.drawImage(src, x, y, w, h);
+}
+
+function imgOK(k) { const i = imgs[k]; return i && i.complete && i.naturalWidth > 0; }
+function lifeKey() { return imgOK('lifeIcon') ? 'lifeIcon' : (imgOK('player') ? 'player' : null); }
+
+// ─── Sprite animation clock ──────────────────────────────────────────
+// Flips between frame A and frame B every ANIM_INTERVAL milliseconds.
+// Only sprites that have a _B asset defined will animate.
+const ANIM_INTERVAL = 500;   // ms per frame — adjust to taste
+let animClock = 0;           // incremented each loop tick
+let animFrame = 0;           // 0 = A, 1 = B
+
+function tickAnimClock(dt) {
+  animClock += dt * 1000;
+  if (animClock >= ANIM_INTERVAL) {
+    animClock -= ANIM_INTERVAL;
+    animFrame = 1 - animFrame;
+  }
+}
+
+// Returns the correct frame key for a sprite, honouring the B-frame if
+// it exists and the clock is on frame 1. Falls back gracefully:
+//   has B + frame=1  → keyB
+//   otherwise        → key  (frame A / only frame)
+// Returns the list of bullet asset keys that are actually loaded.
+// Falls back to ['bullet1'] (which itself falls back to pixel art if null).
+function bulletPool() {
+  const pool = ['bullet1','bullet2','bullet3','bullet4','bullet5'].filter(k => imgOK(k));
+  return pool.length ? pool : ['bullet1'];
+}
+
+function spriteKey(key) {
+  const keyB = key + 'B';
+  return (animFrame === 1 && imgOK(keyB)) ? keyB : key;
+}
+
+async function preloadAll() {
+  const jobs = [];
+
+  // Font
+  if (ASSETS.fontFile) {
+    jobs.push(
+      new FontFace(ASSETS.fontName, `url(${ASSETS.fontFile})`)
+        .load().then(f => document.fonts.add(f)).catch(() => {})
+    );
+  } else {
+    const lnk = document.createElement('link');
+    lnk.rel  = 'stylesheet';
+    lnk.href = 'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap';
+    document.head.appendChild(lnk);
+    jobs.push(new Promise(r => setTimeout(r, 600)));
+  }
+
+  // All image asset keys
+  [
+    'background','border','dangerLine',
+    'player','playerB',
+    'enemyStandard','enemyStandardB','enemyStandardHit','enemyStandardHitB',
+    'enemyFast','enemyFastB','enemyFastHit','enemyFastHitB',
+    'enemyTank','enemyTankB','enemyTankHit','enemyTankHitB','enemyTankHit2','enemyTankHit2B',
+    'bullet1','bullet2','bullet3','bullet4','bullet5',
+    'enemyBullet',
+    'hudBackground','hudDivider','scorePanel','wavePanel','lifeIcon',
+    'legendBackground',
+    'screenStart','screenGameOver','screenWaveClear','screenLoading',
+    'btnStart','btnStartHover',
+    'btnRestart','btnRestartHover',
+    'btnNextWave','btnNextWaveHover',
+  ].forEach(k => { if (ASSETS[k]) jobs.push(loadImg(k, ASSETS[k])); });
+
+  await Promise.all(jobs);
+}
+
+// ─── Font helper ─────────────────────────────────────────────────────
+function font(px, style = '') {
+  return `${style} ${px}px "${ASSETS.fontName}", monospace`.trim();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PIXEL-ART FALLBACK DRAWERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function drawPlayer(cx, x, y, w, h) {
+  cx.fillStyle = C.green;
+  cx.fillRect(x,        y + h*.3,  w,      h*.7);
+  cx.fillRect(x + w*.38,y,         w*.24,  h*.38);
+  cx.fillStyle = C.gdim;
+  cx.fillRect(x + 4,    y + h*.55, w - 8,  h*.12);
+  cx.fillStyle = '#001a08';
+  cx.fillRect(x + w*.28,y + h*.35, w*.18,  h*.25);
+  cx.fillRect(x + w*.54,y + h*.35, w*.18,  h*.25);
+}
+function drawEnemyStandard(cx, x, y, w, h) {
+  cx.fillStyle = C.green;
+  cx.fillRect(x + w*.2,  y,        w*.6,  h*.35);
+  cx.fillRect(x,         y + h*.3, w,     h*.35);
+  cx.fillRect(x + w*.12, y + h*.62,w*.22, h*.38);
+  cx.fillRect(x + w*.66, y + h*.62,w*.22, h*.38);
+  cx.fillStyle = '#003a10';
+  cx.fillRect(x + w*.3,  y + h*.07,w*.16, h*.22);
+  cx.fillRect(x + w*.54, y + h*.07,w*.16, h*.22);
+}
+function drawEnemyFast(cx, x, y, w, h) {
+  cx.fillStyle = C.cyan;
+  cx.fillRect(x + w*.28, y,        w*.44, h*.28);
+  cx.fillRect(x + w*.08, y + h*.24,w*.84, h*.34);
+  cx.fillRect(x,         y + h*.54,w*.26, h*.24);
+  cx.fillRect(x + w*.74, y + h*.54,w*.26, h*.24);
+  cx.fillRect(x + w*.12, y + h*.76,w*.18, h*.24);
+  cx.fillRect(x + w*.7,  y + h*.76,w*.18, h*.24);
+  cx.fillStyle = '#003d4d';
+  cx.fillRect(x + w*.34, y + h*.05,w*.14, h*.18);
+  cx.fillRect(x + w*.52, y + h*.05,w*.14, h*.18);
+}
+function drawEnemyTank(cx, x, y, w, h, hit) {
+  cx.fillStyle = hit ? C.orange : C.yellow;
+  cx.fillRect(x,         y + h*.14, w,     h*.52);
+  cx.fillRect(x + w*.08, y,         w*.84, h*.18);
+  cx.fillRect(x + w*.08, y + h*.66, w*.84, h*.34);
+  cx.fillRect(x - w*.06, y + h*.2,  w*.14, h*.36);
+  cx.fillRect(x + w*.92, y + h*.2,  w*.14, h*.36);
+  cx.fillStyle = hit ? '#552200' : '#443300';
+  cx.fillRect(x + w*.34, y + h*.22, w*.13, h*.2);
+  cx.fillRect(x + w*.53, y + h*.22, w*.13, h*.2);
+  if (hit) {
+    cx.fillStyle = C.red;
+    cx.fillRect(x + w*.18, y + h*.44, w*.12, h*.1);
+    cx.fillRect(x + w*.58, y + h*.38, w*.12, h*.1);
+  }
+}
+function drawBullet(cx, x, y, w, h) {
+  // Square player bullet — bright core with glowing tip
+  cx.fillStyle = C.green;  cx.fillRect(x, y, w, h);
+  cx.fillStyle = C.white;  cx.fillRect(x + w*.25, y + h*.05, w*.5, h*.35);
+  cx.fillStyle = C.gdim;   cx.fillRect(x + w*.1,  y + h*.65, w*.8, h*.3);
+}
+function drawEnemyBullet(cx, x, y, w, h) {
+  // Square enemy bullet — red core with orange base
+  cx.fillStyle = C.red;    cx.fillRect(x, y, w, h);
+  cx.fillStyle = C.orange; cx.fillRect(x + w*.1, y + h*.6, w*.8, h*.35);
+  cx.fillStyle = '#ff6666'; cx.fillRect(x + w*.25, y + h*.05, w*.5, h*.3);
+}
+function drawLifeFallback(cx, x, y, w, h) {
+  cx.fillStyle = C.green;
+  cx.fillRect(x,        y + h*.3,  w,     h*.7);
+  cx.fillRect(x + w*.38,y,         w*.24, h*.38);
+  cx.fillStyle = C.gdim;
+  cx.fillRect(x + 2,    y + h*.55, w - 4, h*.12);
+}
+
+// Fallback button (used when no PNG provided)
+function drawFallbackButton(cx, x, y, w, h, label, hov) {
+  cx.save();
+  cx.fillStyle = hov ? C.green : 'rgba(0,0,0,0.75)';
+  if (hov) { cx.shadowColor = C.green; cx.shadowBlur = 24; }
+  cx.fillRect(x, y, w, h);
+  cx.shadowBlur = 0;
+  cx.strokeStyle = hov ? C.green : C.gdim; cx.lineWidth = 3;
+  cx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  cx.fillStyle = hov ? C.black : C.green;
+  cx.font = font(Math.floor(h * .28));
+  cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  cx.fillText(label, x + w / 2, y + h / 2);
+  cx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  LAYOUT CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════
+
+const HUD_H      = 90;
+const HUD_PAD    = 36;
+const LEGEND_H   = 70;
+const PLAY_TOP   = HUD_H;
+const PLAY_H     = H - HUD_H - LEGEND_H;
+const PLAY_BOT   = PLAY_TOP + PLAY_H;
+const DANGER_Y       = PLAY_BOT - 110;
+const LIFE_W     = 54, LIFE_H = 34;
+
+// Sprite sizes
+const PLAYER_W = 120, PLAYER_H = 74, PLAYER_SPEED = 520;
+const BW = 48, BH = 48, BSPEED = 900;
+const EBW = 32, EBH = 32, EBSPEED = 440;
+const FIRE_INTERVAL = 480;
+
+const ETYPE = {
+  standard: { w:64, h:48, points:10, hp:2, color:C.green  },
+  fast:     { w:54, h:44, points:20, hp:2, color:C.cyan   },
+  tank:     { w:88, h:56, points:25, hp:3, color:C.yellow },
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════════════════════
+
+let state = null, keys = {}, lastTime = 0, animId = null;
+let devMode = false;  // press U to toggle — fast fire + full lives
+const hover    = { start:false, restart:false, next:false };
+const btnRects = { start:null,  restart:null,  next:null  };
+
+// ─── Wave formations ─────────────────────────────────────────────────
+// Each wave is a 2D array of rows, bottom-to-top order (index 0 = top row).
+// Add as many waves as you like; waves beyond the last defined one cycle
+// back through with progressively higher speed/drop penalties applied.
+const WAVE_LAYOUTS = [
+  // Wave 1 — classic opener: scouts up top, regulars in the middle, tanks below
+  [
+    ['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'],
+    ['standard','standard','standard','standard','standard','standard','standard','standard','standard','standard'],
+    ['standard','standard','standard','standard','standard','standard','standard','standard','standard','standard'],
+    ['tank','tank','tank','tank','tank','tank','tank'],
+  ],
+  // Wave 2 — more tanks, flanking fast enemies
+  [
+    ['fast','fast','fast','standard','standard','standard','standard','fast','fast','fast'],
+    ['tank','standard','tank','standard','tank','standard','tank','standard','tank','standard'],
+    ['standard','standard','standard','standard','standard','standard','standard','standard','standard','standard'],
+    ['tank','tank','tank','tank','tank','tank','tank','tank'],
+  ],
+  // Wave 3 — heavy fast swarm, tanks as a shield wall
+  [
+    ['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'],
+    ['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'],
+    ['standard','standard','standard','standard','standard','standard','standard','standard','standard','standard'],
+    ['tank','tank','tank','tank','tank','tank','tank','tank','tank'],
+  ],
+  // Wave 4 — diamond-ish: tanks flanked by fast, wide standard centre
+  [
+    ['fast','fast','fast','fast','fast','fast','fast','fast'],
+    ['tank','standard','standard','standard','standard','standard','standard','tank'],
+    ['tank','standard','standard','standard','standard','standard','standard','tank'],
+    ['fast','fast','fast','fast','fast','fast','fast','fast'],
+  ],
+  // Wave 5 — full assault: every row a mix of all types
+  [
+    ['fast','tank','fast','fast','tank','fast','fast','tank','fast','fast'],
+    ['standard','fast','standard','tank','standard','fast','standard','tank','standard','fast'],
+    ['tank','standard','fast','standard','tank','standard','fast','standard','tank','standard'],
+    ['fast','fast','fast','fast','fast','fast','fast','fast','fast','fast'],
+  ],
+];
+
+function getLayout(wave) {
+  // Cycles back through defined waves for wave 6+
+  return WAVE_LAYOUTS[(wave - 1) % WAVE_LAYOUTS.length];
+}
+
+function initState(wave = 1, prevLives = 3, prevScore = 0) {
+  const layout  = getLayout(wave);
+  const enemies = [];
+  const hGap = 28, vGap = 22;
+  let rowY = PLAY_TOP + 60;
+
+  layout.forEach(row => {
+    // Use the widest and tallest type in this row as the cell size so
+    // mixed-type rows all share a consistent grid — no overlaps.
+    const cellW  = Math.max(...row.map(t => ETYPE[t].w));
+    const cellH  = Math.max(...row.map(t => ETYPE[t].h));
+    const totalW = row.length * cellW + (row.length - 1) * hGap;
+    const sx     = (W - totalW) / 2;
+    // A row is "pure fast" only if every enemy in it is the fast type.
+    // Mixed rows move at the base swarm speed so they stay in formation.
+    const pureFast = row.every(t => t === 'fast');
+
+    row.forEach((t, ci) => {
+      const d   = ETYPE[t];
+      // Centre each sprite inside its cell
+      const cellX = sx + ci * (cellW + hGap);
+      const offX  = Math.round((cellW - d.w) / 2);
+      const offY  = Math.round((cellH - d.h) / 2);
+      enemies.push({
+        x: cellX + offX, y: rowY + offY,
+        w: d.w, h: d.h, type: t,
+        hp: d.hp, maxHp: d.hp, points: d.points,
+        alive: true, shootTimer: 1500 + Math.random() * 3000,
+        pureFast,   // true only when every enemy in this row is fast
+      });
+    });
+    rowY += cellH + vGap;
+  });
+
+  return {
+    player: { x: W/2 - PLAYER_W/2, y: PLAY_BOT - PLAYER_H - 16, w: PLAYER_W, h: PLAYER_H, facing: 1 },
+    enemies, bullets: [], eBullets: [],
+    score: prevScore,
+    lives: prevLives,
+    wave, phase: 'playing',
+    swarm: {
+      dir: 1, dropTimer: 0,
+      dropInterval: Math.max(900 - (wave - 1) * 70, 220),
+      speed: 90 + (wave - 1) * 18,
+      dropAmount: 30, accel: 0,
+    },
+    fireTimer: 0, particles: [],
+  };
+}
+
+// ─── Particles ───────────────────────────────────────────────────────
+function spawnBurst(x, y, color, n = 10) {
+  for (let i = 0; i < n; i++) {
+    const a = (Math.PI * 2 * i / n) + Math.random() * .6;
+    const sp = 80 + Math.random() * 180;
+    state.particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp,
+      life: 1, decay: .87 + Math.random()*.08, size: 5 + Math.random()*6, color });
+  }
+}
+function tickParticles(dt) {
+  state.particles = state.particles.filter(p => p.life > .04);
+  state.particles.forEach(p => { p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 120*dt; p.life *= p.decay; });
+}
+function drawParticles() {
+  state.particles.forEach(p => {
+    ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ─── Collision ───────────────────────────────────────────────────────
+function overlaps(a, b) {
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  UPDATE
+// ═══════════════════════════════════════════════════════════════════════
+
+function update(dt) {
+  if (!state || state.phase !== 'playing') return;
+  const s = state;
+
+  // Player move
+  if (keys['ArrowLeft']  || keys['a']) { s.player.x -= PLAYER_SPEED * dt; s.player.facing = -1; }
+  if (keys['ArrowRight'] || keys['d']) { s.player.x += PLAYER_SPEED * dt; s.player.facing =  1; }
+  s.player.x = Math.max(0, Math.min(W - s.player.w, s.player.x));
+
+  // Auto fire — dev mode fires ~10× faster
+  s.fireTimer -= dt * 1000;
+  if (s.fireTimer <= 0) {
+    const pool    = bulletPool();
+    const variant = pool[Math.floor(Math.random() * pool.length)];
+    s.bullets.push({ x: s.player.x + s.player.w/2 - BW/2, y: s.player.y - BH, w: BW, h: BH, variant });
+    s.fireTimer = devMode ? 50 : FIRE_INTERVAL;
+  }
+
+  // Move bullets
+  s.bullets.forEach(b => b.y -= BSPEED * dt);
+  s.bullets  = s.bullets.filter(b => b.y + b.h > PLAY_TOP);
+  s.eBullets.forEach(b => b.y += EBSPEED * dt);
+  s.eBullets = s.eBullets.filter(b => b.y < PLAY_BOT);
+
+  // Swarm
+  const alive = s.enemies.filter(e => e.alive);
+  if (!alive.length) { s.phase = 'win'; return; }
+
+  s.swarm.accel += dt;
+  const af  = 1 + s.swarm.accel * .035;
+  const spd = s.swarm.speed * af;
+  alive.forEach(e => { e.x += spd * (e.pureFast ? 1.7 : 1) * s.swarm.dir * dt; });
+
+  s.swarm.dropTimer += dt * 1000;
+  const di = Math.max(s.swarm.dropInterval / af, 140);
+  if (s.swarm.dropTimer >= di) {
+    s.swarm.dropTimer = 0;
+    let minX = Infinity, maxX = -Infinity;
+    alive.forEach(e => { minX = Math.min(minX, e.x); maxX = Math.max(maxX, e.x + e.w); });
+    if (s.swarm.dir === 1 && maxX >= W - 4)  { s.swarm.dir = -1; alive.forEach(e => e.y += s.swarm.dropAmount); }
+    if (s.swarm.dir === -1 && minX <= 4)     { s.swarm.dir =  1; alive.forEach(e => e.y += s.swarm.dropAmount); }
+  }
+
+  // Enemy shoot (fast type)
+  alive.filter(e => e.type === 'fast').forEach(e => {
+    e.shootTimer -= dt * 1000;
+    if (e.shootTimer <= 0) {
+      e.shootTimer = 1400 + Math.random() * 2400;
+      s.eBullets.push({ x: e.x + e.w/2 - EBW/2, y: e.y + e.h, w: EBW, h: EBH });
+    }
+  });
+
+  // Bullet ↔ enemy
+  s.bullets.forEach(b => {
+    if (b.dead) return;
+    alive.forEach(e => {
+      if (!e.alive || b.dead) return;
+      if (overlaps(b, e)) {
+        b.dead = true; e.hp--;
+        if (e.hp <= 0) { e.alive = false; s.score += e.points; spawnBurst(e.x + e.w/2, e.y + e.h/2, ETYPE[e.type].color, 12); }
+        else spawnBurst(e.x + e.w/2, e.y + e.h/2, C.orange, 6);
+      }
+    });
+  });
+  s.bullets = s.bullets.filter(b => !b.dead);
+
+  // Enemy bullet ↔ player
+  s.eBullets.forEach(b => {
+    if (b.dead) return;
+    if (overlaps(b, s.player)) {
+      b.dead = true; s.lives--;
+      spawnBurst(s.player.x + s.player.w/2, s.player.y + s.player.h/2, C.red, 14);
+      if (s.lives <= 0) s.phase = 'gameover'; if (s.lives <= 0) { s.phase = 'gameover'; localStorage.setItem('pixelate_pending_score', JSON.stringify({ game: 'game11', score: s.score })); }
+    }
+  });
+  s.eBullets = s.eBullets.filter(b => !b.dead);
+
+  // Danger line breach
+  if (alive.some(e => e.y + e.h >= DANGER_Y)) s.phase = 'gameover'; if (s.lives <= 0) { s.phase = 'gameover'; localStorage.setItem('pixelate_pending_score', JSON.stringify({ game: 'game11', score: s.score })); }
+
+  tickParticles(dt);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DRAW HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function fillText(text, x, y, color, size, align = 'left', baseline = 'alphabetic') {
+  ctx.fillStyle = color; ctx.font = font(size);
+  ctx.textAlign = align; ctx.textBaseline = baseline;
+  ctx.fillText(text, x, y);
+}
+function glowText(text, x, y, color, glowColor, size, align = 'center') {
+  ctx.save();
+  ctx.shadowColor = glowColor; ctx.shadowBlur = 28;
+  fillText(text, x, y, color, size, align, 'middle');
+  ctx.restore();
+}
+
+// ─── HUD ─────────────────────────────────────────────────────────────
+function drawHUD() {
+  // Background — PNG/GIF or solid fill
+  if (imgOK('hudBackground')) {
+    drawAsset('hudBackground', ctx, 0, 0, W, HUD_H);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(0, 0, W, HUD_H);
+  }
+
+  // Divider — PNG/GIF or drawn line
+  if (imgOK('hudDivider')) {
+    drawAsset('hudDivider', ctx, 0, HUD_H - 4, W, 4);
+  } else {
+    ctx.strokeStyle = C.gdim; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, HUD_H); ctx.lineTo(W, HUD_H); ctx.stroke();
+  }
+
+  if (!state) return;
+
+  const PANEL_W  = 340;
+  const PANEL_H  = HUD_H - 14;
+  const PANEL_Y  = 7;
+  const LABEL_SZ = 16;
+  const NUM_SZ   = 28;
+  const CY       = HUD_H / 2;
+
+  // ── Score (left) ────────────────────────────────────────────────────
+  const scoreLeft = HUD_PAD;
+  if (imgOK('scorePanel')) {
+    drawAsset('scorePanel', ctx, scoreLeft, PANEL_Y, PANEL_W, PANEL_H);
+    glowText(String(state.score).padStart(6, '0'),
+      scoreLeft + PANEL_W / 2, CY, C.green, C.green, NUM_SZ, 'center');
+  } else {
+    fillText('SCORE', scoreLeft, CY - 4, C.gdim, LABEL_SZ, 'left', 'bottom');
+    ctx.save();
+    ctx.shadowColor = C.green; ctx.shadowBlur = 18;
+    fillText(String(state.score).padStart(6, '0'),
+      scoreLeft, CY + 4, C.green, NUM_SZ, 'left', 'top');
+    ctx.restore();
+  }
+
+  // ── Wave (right) ─────────────────────────────────────────────────────
+  const waveRight = W - HUD_PAD;
+  if (imgOK('wavePanel')) {
+    drawAsset('wavePanel', ctx, waveRight - PANEL_W, PANEL_Y, PANEL_W, PANEL_H);
+    glowText(String(state.wave).padStart(2, '0'),
+      waveRight - PANEL_W / 2, CY, C.cyan, C.cyan, NUM_SZ, 'center');
+  } else {
+    fillText('WAVE', waveRight, CY - 4, C.gdim, LABEL_SZ, 'right', 'bottom');
+    ctx.save();
+    ctx.shadowColor = C.cyan; ctx.shadowBlur = 18;
+    fillText(String(state.wave).padStart(2, '0'),
+      waveRight, CY + 4, C.cyan, NUM_SZ, 'right', 'top');
+    ctx.restore();
+  }
+
+  // ── Lives (centre) ───────────────────────────────────────────────────
+  const LIFE_GAP    = 12;
+  const totalLivesW = 3 * LIFE_W + 2 * LIFE_GAP;
+  const livesBlockX = W / 2 - totalLivesW / 2;
+
+  fillText('LIVES', W / 2, CY - 4, C.gdim, LABEL_SZ, 'center', 'bottom');
+
+  const iconY = CY + 2;
+  for (let i = 0; i < 3; i++) {
+    const ix = livesBlockX + i * (LIFE_W + LIFE_GAP);
+    ctx.globalAlpha = i < state.lives ? 1 : 0.15;
+    const lkBase = lifeKey();
+    const lk     = lkBase ? spriteKey(lkBase) : null;
+    if (lk) drawAsset(lk, ctx, ix, iconY, LIFE_W, LIFE_H);
+    else    drawLifeFallback(ctx, ix, iconY, LIFE_W, LIFE_H);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ─── Legend bar ──────────────────────────────────────────────────────
+function drawLegend() {
+  if (imgOK('legendBackground')) {
+    drawAsset('legendBackground', ctx, 0, PLAY_BOT, W, LEGEND_H);
+    return;
+  }
+
+  // Fallback: solid bar + divider + inline sprites + text
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
+  ctx.fillRect(0, PLAY_BOT, W, LEGEND_H);
+  ctx.strokeStyle = C.gdim; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, PLAY_BOT); ctx.lineTo(W, PLAY_BOT); ctx.stroke();
+
+  const items = [
+    { type:'standard', label:'STANDARD — 10 PTS' },
+    { type:'fast',     label:'SPEEDER — 20 PTS'  },
+    { type:'tank',     label:'TANK — 25 PTS  (2 HITS)' },
+  ];
+  const iconW = 44, iconH = 32, gap = 48;
+  ctx.font = font(16);
+  const totalW = items.reduce((s, item) => s + iconW + 14 + ctx.measureText(item.label).width + gap, 0) - gap;
+  let ix = (W - totalW) / 2;
+
+  items.forEach(item => {
+    const d = ETYPE[item.type];
+    const iy = PLAY_BOT + (LEGEND_H - iconH) / 2;
+    ctx.save();
+    ctx.translate(ix, iy);
+    ctx.scale(iconW / d.w, iconH / d.h);
+    ctx.translate(-ix, -iy);
+    const ik = { standard:'enemyStandard', fast:'enemyFast', tank:'enemyTank' }[item.type];
+    if (imgOK(ik)) { drawAsset(ik, ctx, ix, iy, d.w, d.h); }
+    else {
+      if (item.type === 'standard') drawEnemyStandard(ctx, ix, iy, d.w, d.h);
+      else if (item.type === 'fast') drawEnemyFast(ctx, ix, iy, d.w, d.h);
+      else drawEnemyTank(ctx, ix, iy, d.w, d.h, false);
+    }
+    ctx.restore();
+    fillText(item.label, ix + iconW + 14, PLAY_BOT + LEGEND_H/2, C.gdim, 16, 'left', 'middle');
+    ix += iconW + 14 + ctx.measureText(item.label).width + gap;
+  });
+}
+
+// ─── Playfield ───────────────────────────────────────────────────────
+function drawPlayfield() {
+  // Background — drawn at the full canvas size (1920 × 1080) but clipped
+  // to the play area so it is never squashed. The HUD and legend regions
+  // are simply cropped out. Students should design the asset at 1920 × 1080.
+  if (imgOK('background')) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, PLAY_TOP, W, PLAY_H);
+    ctx.clip();
+    drawAsset('background', ctx, 0, 0, W, H);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = C.darkbg;
+    ctx.fillRect(0, PLAY_TOP, W, PLAY_H);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    for (let i = 0; i < 220; i++) {
+      ctx.fillRect((i*2971) % W, PLAY_TOP + (i*1733 + i*i*7) % PLAY_H, (i%3===0)?2:1, (i%3===0)?2:1);
+    }
+  }
+
+  // Danger indicator — strip PNG from the danger line down to the legend bar,
+  // or fallback dashed line + tint
+  if (imgOK('dangerLine')) {
+    drawAsset('dangerLine', ctx, 0, DANGER_Y, W, PLAY_BOT - DANGER_Y);
+  } else {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,42,42,.45)';
+    ctx.setLineDash([12, 12]); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, DANGER_Y); ctx.lineTo(W, DANGER_Y); ctx.stroke();
+    ctx.setLineDash([]); ctx.restore();
+    ctx.fillStyle = 'rgba(255,42,42,.07)';
+    ctx.fillRect(0, DANGER_Y, W, PLAY_BOT - DANGER_Y);
+  }
+
+  if (!state) return;
+
+  // Enemies
+  state.enemies.forEach(e => {
+    if (!e.alive) return;
+
+    // Resolve the base asset key from the enemy type and current HP.
+    // standard/fast: hp=2 → normal, hp=1 → Hit
+    // tank:          hp=3 → normal, hp=2 → Hit, hp=1 → Hit2
+    let baseKey;
+    if (e.type === 'standard') {
+      baseKey = e.hp < e.maxHp ? 'enemyStandardHit' : 'enemyStandard';
+    } else if (e.type === 'fast') {
+      baseKey = e.hp < e.maxHp ? 'enemyFastHit' : 'enemyFast';
+    } else {
+      // tank
+      if      (e.hp === e.maxHp)     baseKey = 'enemyTank';
+      else if (e.hp === e.maxHp - 1) baseKey = 'enemyTankHit';
+      else                            baseKey = 'enemyTankHit2';
+    }
+
+    const ik = spriteKey(baseKey);
+    if (imgOK(ik)) {
+      drawAsset(ik, ctx, e.x, e.y, e.w, e.h);
+    } else {
+      // Pixel-art fallback — show damage state visually
+      const hit = e.hp < e.maxHp;
+      if (e.type === 'standard') drawEnemyStandard(ctx, e.x, e.y, e.w, e.h);
+      else if (e.type === 'fast') drawEnemyFast(ctx, e.x, e.y, e.w, e.h);
+      else drawEnemyTank(ctx, e.x, e.y, e.w, e.h, hit);
+    }
+  });
+
+  // Player — flipped horizontally when facing left
+  const p  = state.player;
+  const pk = spriteKey('player');
+  ctx.save();
+  if (p.facing === -1) {
+    // Mirror: translate to the right edge of the sprite, scale x by -1
+    ctx.translate(p.x + p.w, p.y);
+    ctx.scale(-1, 1);
+    if (imgOK(pk)) drawAsset(pk, ctx, 0, 0, p.w, p.h);
+    else drawPlayer(ctx, 0, 0, p.w, p.h);
+  } else {
+    if (imgOK(pk)) drawAsset(pk, ctx, p.x, p.y, p.w, p.h);
+    else drawPlayer(ctx, p.x, p.y, p.w, p.h);
+  }
+  ctx.restore();
+
+  // Player bullets — each uses its randomly assigned variant asset
+  state.bullets.forEach(b => {
+    if (imgOK(b.variant)) drawAsset(b.variant, ctx, b.x, b.y, b.w, b.h);
+    else drawBullet(ctx, b.x, b.y, b.w, b.h);
+  });
+
+  // Enemy bullets
+  state.eBullets.forEach(b => {
+    if (imgOK('enemyBullet')) drawAsset('enemyBullet', ctx, b.x, b.y, b.w, b.h);
+    else drawEnemyBullet(ctx, b.x, b.y, b.w, b.h);
+  });
+
+  drawParticles();
+}
+
+// ─── Border (topmost) ────────────────────────────────────────────────
+function drawBorder() {
+  if (imgOK('border')) drawAsset('border', ctx, 0, 0, W, H);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  OVERLAY SCREENS
+// ═══════════════════════════════════════════════════════════════════════
+
+function centredBtn(key, cy, w = 480, h = 90) {
+  const r = { x: W/2 - w/2, y: cy - h/2, w, h };
+  btnRects[key] = r;
+  return r;
+}
+
+function drawBtn(key, label, hov, cy, w = 480, h = 90) {
+  const r        = centredBtn(key, cy, w, h);
+  const normalKey = { start:'btnStart', restart:'btnRestart', next:'btnNextWave' }[key];
+  const hoverKey  = { start:'btnStartHover', restart:'btnRestartHover', next:'btnNextWaveHover' }[key];
+
+  if (imgOK(normalKey)) {
+    const useHov = hov && imgOK(hoverKey);
+    ctx.globalAlpha = (!hov) ? 0.75 : 1;
+    drawAsset(useHov ? hoverKey : normalKey, ctx, r.x, r.y, r.w, r.h);
+    ctx.globalAlpha = 1;
+  } else {
+    drawFallbackButton(ctx, r.x, r.y, r.w, r.h, label, hov);
+  }
+}
+
+function drawStartScreen() {
+  if (imgOK('screenStart')) {
+    drawAsset('screenStart', ctx, 0, 0, W, H);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(0, PLAY_TOP, W, PLAY_H);
+    glowText('SPACE INVADERS', W/2, PLAY_TOP + PLAY_H*.28, C.green, C.green, 72);
+    fillText('← → MOVE   |   AUTO-FIRE ON   |   3 LIVES', W/2, PLAY_TOP + PLAY_H*.46, C.gdim, 22, 'center', 'middle');
+    fillText("DON'T LET THEM REACH THE RED LINE!", W/2, PLAY_TOP + PLAY_H*.54, C.gdim, 20, 'center', 'middle');
+  }
+  drawBtn('start', 'INSERT COIN', hover.start, PLAY_TOP + PLAY_H * .70);
+}
+
+function drawGameOverScreen() {
+  if (imgOK('screenGameOver')) {
+    drawAsset('screenGameOver', ctx, 0, 0, W, H);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(0, PLAY_TOP, W, PLAY_H);
+    glowText('GAME OVER', W/2, PLAY_TOP + PLAY_H*.3, C.red, C.red, 80);
+    glowText(`SCORE: ${state.score}`, W/2, PLAY_TOP + PLAY_H*.5, C.yellow, C.yellow, 40);
+  }
+  drawBtn('restart', 'PLAY AGAIN', hover.restart, PLAY_TOP + PLAY_H * .70);
+}
+
+function drawWaveClearScreen() {
+  if (imgOK('screenWaveClear')) {
+    drawAsset('screenWaveClear', ctx, 0, 0, W, H);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(0, PLAY_TOP, W, PLAY_H);
+    glowText('WAVE CLEAR!', W/2, PLAY_TOP + PLAY_H*.3, C.green, C.green, 76);
+    glowText(`SCORE: ${state.score}`, W/2, PLAY_TOP + PLAY_H*.5, C.yellow, C.yellow, 40);
+  }
+  drawBtn('next', 'NEXT WAVE', hover.next, PLAY_TOP + PLAY_H * .70);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  MAIN DRAW
+// ═══════════════════════════════════════════════════════════════════════
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawHUD();
+  drawPlayfield();
+  drawLegend();
+  drawBorder();
+
+  if (!state || state.phase === 'start') drawStartScreen();
+  else if (state.phase === 'gameover')   drawGameOverScreen();
+  else if (state.phase === 'win')        drawWaveClearScreen();
+
+  // Dev mode indicator — bright badge in bottom-right corner
+  if (devMode) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,220,0,0.92)';
+    ctx.fillRect(W - 220, H - 36, 208, 28);
+    ctx.fillStyle = '#000';
+    ctx.font = font(14);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('DEV MODE  [U] OFF', W - 18, H - 22);
+    ctx.restore();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════════════════════
+
+function loop(ts) {
+  const dt = Math.min((ts - lastTime) / 1000, .05);
+  lastTime = ts;
+  tickRelays();       // stamp current GIF frame onto every relay canvas
+  tickAnimClock(dt);  // advance A/B sprite frame counter
+  update(dt);
+  draw();
+  animId = requestAnimationFrame(loop);
+}
+
+function startGame(wave = 1, carryLives = 3, carryScore = 0) {
+  state = initState(wave, carryLives, carryScore);
+  keys  = {};
+}
+
+// ─── Input ───────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  // ── Dev mode: U toggles fast-fire and refills lives ──────────────
+  if (e.key === 'u' || e.key === 'U') {
+    devMode = !devMode;
+    if (state) state.lives = 3;
+    console.log(`[DEV] ${devMode ? 'ON — fast fire, lives restored' : 'OFF'}`);
+  }
+});
+document.addEventListener('keyup',   e => { keys[e.key] = false; });
+
+// ─── Button hit-testing ──────────────────────────────────────────────
+function canvasPoint(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
+}
+function inRect(pt, r) { return r && pt.x >= r.x && pt.x <= r.x+r.w && pt.y >= r.y && pt.y <= r.y+r.h; }
+
+canvas.addEventListener('mousemove', e => {
+  const pt = canvasPoint(e);
+  hover.start   = inRect(pt, btnRects.start);
+  hover.restart = inRect(pt, btnRects.restart);
+  hover.next    = inRect(pt, btnRects.next);
+});
+
+canvas.addEventListener('click', e => {
+  const pt = canvasPoint(e);
+  if ((!state || state.phase === 'start')      && inRect(pt, btnRects.start))   startGame(1, 3, 0);
+  else if (state && state.phase === 'gameover' && inRect(pt, btnRects.restart)) startGame(1, 3, 0);
+  else if (state && state.phase === 'win'      && inRect(pt, btnRects.next))    startGame(state.wave + 1, state.lives, state.score);
+});
+
+// ─── Touch ───────────────────────────────────────────────────────────
+canvas.addEventListener('touchstart', e => {
+  if (!e.touches.length) return;
+  const pt = canvasPoint(e.touches[0]);
+  if ((!state || state.phase === 'start')      && inRect(pt, btnRects.start))   { startGame(1, 3, 0); e.preventDefault(); }
+  else if (state && state.phase === 'gameover' && inRect(pt, btnRects.restart)) { startGame(1, 3, 0); e.preventDefault(); }
+  else if (state && state.phase === 'win'      && inRect(pt, btnRects.next))    { startGame(state.wave + 1, state.lives, state.score); e.preventDefault(); }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  if (!state || state.phase !== 'playing') return;
+  const pt = canvasPoint(e.touches[0]);
+  keys['ArrowLeft']  = pt.x < W / 2;
+  keys['ArrowRight'] = pt.x >= W / 2;
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+  keys['ArrowLeft'] = false; keys['ArrowRight'] = false;
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════════════════
+
+(async function boot() {
+  // Show loading screen immediately, before anything loads
+  if (ASSETS.screenLoading) {
+    // Can't use imgOK yet — load this one synchronously first
+    await loadImg('screenLoading', ASSETS.screenLoading);
+  }
+  if (imgOK('screenLoading')) {
+    drawAsset('screenLoading', ctx, 0, 0, W, H);
+  } else {
+    ctx.fillStyle = C.darkbg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = C.gdim; ctx.font = font(28);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('LOADING…', W/2, H/2);
+  }
+
+  await preloadAll();
+
+  lastTime = performance.now();
+  animId   = requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
