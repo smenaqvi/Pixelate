@@ -709,6 +709,7 @@
 
   let saveTimeout;
   playerNameInput.addEventListener('input', () => {
+    playerNameInput.value = playerNameInput.value.toUpperCase();
     localStorage.setItem('pixelate_player_name', playerNameInput.value.trim());
     nameSavedEl.classList.add('show');
     clearTimeout(saveTimeout);
@@ -718,8 +719,8 @@
   /* ── Store player name before opening game ── */
   links.forEach(link => {
     link.addEventListener('click', () => {
-      const name = playerNameInput.value.trim() || 'ANON';
-      localStorage.setItem('pixelate_player_name', playerNameInput.value.trim());
+      const name = playerNameInput.value.trim().toUpperCase() || 'ANON';
+      localStorage.setItem('pixelate_player_name', playerNameInput.value.trim().toUpperCase());
       localStorage.setItem('pixelate_active_player', name);
     });
   });
