@@ -349,7 +349,7 @@
   <div id="gameover-screen" class="overlay-screen hidden">
     <img class="go-custom-bg" src="" alt="">
     <div class="go-title">GAME OVER</div>
-    <div class="go-score">SCORE: <span id="go-score-val">0</span></div>
+    <div class="go-score">TIME LEFT: <span id="go-score-val">0:00</span></div>
     <button class="restart-btn" id="btn-gameover-restart" onclick="restartGame()">
       <div class="btn-placeholder">PLAY AGAIN</div>
       <img class="btn-custom-img btn-img-normal" src="" alt="Restart">
@@ -361,7 +361,7 @@
   <div id="win-screen" class="overlay-screen hidden">
     <img class="win-custom-bg" src="" alt="">
     <div class="win-title">YOU WIN!</div>
-    <div class="win-score">SCORE: <span id="win-score-val">0</span></div>
+    <div class="win-score">TIME LEFT: <span id="win-score-val">0:00</span></div>
     <button class="restart-btn" id="btn-win-restart" onclick="restartGame()">
       <div class="btn-placeholder">PLAY AGAIN</div>
       <img class="btn-custom-img btn-img-normal" src="" alt="Restart">
@@ -929,17 +929,21 @@ function restartGame() {
 function triggerGameOver() {
   gameState = 'gameover';
   document.getElementById('hud').classList.remove('active');
-  document.getElementById('go-score-val').textContent = score;
+  const mins = Math.floor(timerRemaining / 60);
+  const secs = Math.floor(timerRemaining % 60);
+  document.getElementById('go-score-val').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
   document.getElementById('gameover-screen').classList.remove('hidden');
-  localStorage.setItem('pixelate_pending_score', JSON.stringify({ game: 'game07', score: score }));
+  localStorage.setItem('pixelate_pending_score', JSON.stringify({ game: 'game07', score: Math.floor(timerRemaining) }));
 }
 
 function triggerWin() {
   gameState = 'win';
   document.getElementById('hud').classList.remove('active');
-  document.getElementById('win-score-val').textContent = score;
+  const mins = Math.floor(timerRemaining / 60);
+  const secs = Math.floor(timerRemaining % 60);
+  document.getElementById('win-score-val').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
   document.getElementById('win-screen').classList.remove('hidden');
-  localStorage.setItem('pixelate_pending_score', JSON.stringify({ game: 'game07', score: score }));
+  localStorage.setItem('pixelate_pending_score', JSON.stringify({ game: 'game07', score: Math.floor(timerRemaining) }));
 }
 
 
