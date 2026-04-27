@@ -349,6 +349,18 @@
     padding: 12px 16px;
     border: 1px solid transparent;
     border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .leaderboard-row:hover {
+    background: rgba(0, 229, 255, 0.04);
+    border-color: var(--accent-cyan);
+  }
+
+  .leaderboard-row:hover .lb-game {
+    color: var(--accent-cyan);
+    text-shadow: var(--glow-cyan);
   }
 
   .leaderboard-row .num {
@@ -619,26 +631,26 @@
 
   /* ── Game metadata (used by leaderboard) ── */
   const GAMES = [
-    { id: 'game01', name: 'Abdalla Al-Bander — Feed Me Frenzy' },
-    { id: 'game02', name: '[Coming Soon]' },
-    { id: 'game03', name: 'Aisha Al-Naimi — Farm Life' },
-    { id: 'game04', name: 'Altaf AlSabah — Midnight Escape' },
-    { id: 'game05', name: 'Alya Al-Jamal — Last Call Market' },
-    { id: 'game06', name: 'Dana Ahmed — Esteem Garden' },
-    { id: 'game07', name: 'Farah Osman' },
-    { id: 'game08', name: 'Fatima Abdulla — Doha Orbit' },
-    { id: 'game09', name: 'Fatima Al-Attiya — Coffee Run' },
-    { id: 'game10', name: 'Hind AlJaidah — Cupcake Run' },
-    { id: 'game11', name: 'Jumana Al-Emadi — Alien Desert Safari' },
-    { id: 'game12', name: 'Kristen DSilva — Megatropolis' },
-    { id: 'game13', name: 'Mooza Al-Mohannadi — Glam Run' },
-    { id: 'game14', name: 'Noora Al-Attiya — The Maze of Paris' },
-    { id: 'game15', name: 'Noora Al-Kuwari — Deep Sea Invaders' },
-    { id: 'game16', name: 'Noora Al-Thani — Going Nuts!' },
-    { id: 'game17', name: 'Nouf Al-Kuwari — Dead Gold Dust' },
-    { id: 'game18', name: 'Sara Almuhannadi — Roll Your Luck' },
-    { id: 'game19', name: 'Waad Al-Nasr — Dorik Tqadim' },
-    { id: 'game20', name: 'Nourhan Soltan & Almayasa Al-Meadadi — Panic Picnic' },
+    { id: 'game01', name: 'Abdalla Al-Bander — Feed Me Frenzy', preview: 'Abdalla/preview.png' },
+    { id: 'game02', name: '[Coming Soon]', preview: 'Abeeha Khan/preview.png' },
+    { id: 'game03', name: 'Aisha Al-Naimi — Farm Life', preview: 'Aisha Al-Naimi/preview.png' },
+    { id: 'game04', name: 'Altaf AlSabah — Midnight Escape', preview: 'Altaf AlSabah/preview.png' },
+    { id: 'game05', name: 'Alya Al-Jamal — Last Call Market', preview: 'Alya Al-Jamal/preview.png' },
+    { id: 'game06', name: 'Dana Ahmed — Esteem Garden', preview: 'Dana Ahmed/preview.png' },
+    { id: 'game07', name: 'Farah Osman - Dreamlock', preview: 'Farah Osman/preview.png' },
+    { id: 'game08', name: 'Fatima Abdulla — Doha Orbit', preview: 'Fatima Abdulla/preview.png' },
+    { id: 'game09', name: 'Fatima Al-Attiya — Coffee Run', preview: 'Fatima Al-Attiya/preview.png' },
+    { id: 'game10', name: 'Hind AlJaidah — Cupcake Run', preview: 'Hind AlJaidah/preview.png' },
+    { id: 'game11', name: 'Jumana Al-Emadi — Alien Desert Safari', preview: 'Jumana Al-Emadi/preview.png' },
+    { id: 'game12', name: 'Kristen DSilva — Megatropolis', preview: 'Kristen DSilva/preview.png' },
+    { id: 'game13', name: 'Mooza Al-Mohannadi — Glam Run', preview: 'Mooza Al-Mohannadi/preview.png' },
+    { id: 'game14', name: 'Noora Al-Attiya — The Maze of Paris', preview: 'Noora Al-Attiya/preview.png' },
+    { id: 'game15', name: 'Noora Al-Kuwari — Deep Sea Invaders', preview: 'Noora Al-Kuwari/preview.png' },
+    { id: 'game16', name: 'Noora Al-Thani — Going Nuts!', preview: 'Noora Al-Thani/preview.png' },
+    { id: 'game17', name: 'Nouf Al-Kuwari — Dead Gold Dust', preview: 'Nouf Al-Kuwari/preview.png' },
+    { id: 'game18', name: 'Sara Almuhannadi — Roll Your Luck', preview: 'Sara Almuhannadi/preview.png' },
+    { id: 'game19', name: 'Waad Al-Nasr — Dorik Tqadim', preview: 'Waad Al-Nasr/preview.png' },
+    { id: 'game20', name: 'Nourhan Soltan & Almayasa Al-Meadadi — Panic Picnic', preview: 'Nourhan Soltan Almayasa Al-Meadadi/preview.png' },
   ];
 
   /* ── Elements ── */
@@ -807,6 +819,17 @@
           <span class="lb-none">— no score yet —</span>
         `;
       }
+
+      li.addEventListener('mouseenter', () => {
+        if (game.preview) {
+          previewImage.src = game.preview;
+          previewImage.classList.add('active');
+          previewPlaceholder.style.display = 'none';
+        }
+        previewLabel.textContent = game.name;
+        previewLabel.classList.add('active');
+      });
+
       leaderboardList.appendChild(li);
     });
   }
